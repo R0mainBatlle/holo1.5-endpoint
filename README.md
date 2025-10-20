@@ -1,6 +1,7 @@
 # Holo1.5-7B FastAPI Service (OpenAI Compatible)
 
 [![Runpod](https://api.runpod.io/badge/R0mainBatlle/holo1.5-endpoint)](https://console.runpod.io/hub/R0mainBatlle/holo1.5-endpoint)
+[![Build](https://github.com/R0mainBatlle/holo1.5-endpoint/actions/workflows/docker-build.yml/badge.svg)](https://github.com/R0mainBatlle/holo1.5-endpoint/actions/workflows/docker-build.yml)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://hub.docker.com)
 [![OpenAI Compatible](https://img.shields.io/badge/OpenAI-Compatible-412991?style=for-the-badge&logo=openai)](https://platform.openai.com/docs/api-reference)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green?style=for-the-badge)](LICENSE)
@@ -82,17 +83,20 @@ holo-fastapi-service/
 
 ## Quick Start
 
-### Build Notes
-⚠️ **First build takes 10-15 minutes** to download the ~14GB model, but subsequent container starts are instant.
+### Automated Builds
+✅ **Docker images are automatically built by GitHub Actions** on every release and push to main.
+✅ **No local building required** - just pull and run!
 
-⚠️ **Apple Silicon Users (M1/M2/M3):** You must build for AMD64 platform. See [BUILD.md](BUILD.md) for detailed instructions.
+Images are available at: `ghcr.io/r0mainbatlle/holo1.5-endpoint:latest`
 
-**Quick build command for Apple Silicon:**
-```bash
-docker buildx build --platform linux/amd64 -t ghcr.io/r0mainbatlle/holo1.5-endpoint:latest .
-```
+### Build Notes (For Manual Builds)
+⚠️ **First build takes 10-15 minutes** to download the ~14GB model.
 
-### Option 1: Using Pre-built Image (Fastest)
+⚠️ **Apple Silicon Users (M1/M2/M3):** Manual building requires 20-25GB disk space. **Recommended: Use pre-built images or GitHub Actions instead.**
+
+See [BUILD.md](BUILD.md) for detailed manual build instructions.
+
+### Option 1: Using Pre-built Image (Recommended - Fastest)
 
 ```bash
 # Pull from GitHub Container Registry

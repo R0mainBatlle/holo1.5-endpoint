@@ -2,14 +2,73 @@
 
 This guide covers building the Holo1.5-7B Docker image for deployment on RunPod and other GPU platforms.
 
-## Important: Architecture Considerations
+## Recommended: Use GitHub Actions (Automated)
+
+**Don't build locally!** GitHub Actions automatically builds images for you:
+
+✅ **Automatic builds** on every release and push to main
+✅ **No disk space issues** - runs on GitHub's servers
+✅ **Faster** - native x86_64 build (no emulation)
+✅ **Free** - 2000 minutes/month on free tier
+
+### How It Works
+
+1. **Push code or create a release** → GitHub Actions triggers
+2. **GitHub builds the image** on their x86_64 servers
+3. **Image automatically pushed** to `ghcr.io/r0mainbatlle/holo1.5-endpoint`
+4. **Ready to deploy** on RunPod or anywhere
+
+### Setup (One-Time)
+
+The workflow is already configured in `.github/workflows/docker-build.yml`.
+
+**Enable workflow permissions:**
+1. Go to: https://github.com/R0mainBatlle/holo1.5-endpoint/settings/actions
+2. Under "Workflow permissions", select: **Read and write permissions**
+3. Click "Save"
+
+That's it! Now every release will automatically build and push.
+
+### Trigger a Build
+
+**Automatic (on release):**
+```bash
+git tag -a v1.0.1 -m "Release v1.0.1"
+git push origin v1.0.1
+# GitHub Actions automatically builds and pushes
+```
+
+**Manual (via GitHub UI):**
+1. Go to: https://github.com/R0mainBatlle/holo1.5-endpoint/actions
+2. Select "Build and Push Docker Image"
+3. Click "Run workflow" → "Run workflow"
+
+**On push to main:**
+```bash
+git push origin main
+# Automatically triggers build
+```
+
+### Monitor Build Progress
+
+View builds at: https://github.com/R0mainBatlle/holo1.5-endpoint/actions
+
+Build typically takes **10-15 minutes**.
+
+---
+
+## Manual Building (Not Recommended)
+
+If you must build locally (not recommended due to disk space and speed), see below.
+
+### Important: Architecture Considerations
 
 The image **must be built for AMD64/x86_64** architecture since:
 - NVIDIA GPUs require x86_64
 - RunPod uses x86_64 servers
 - The CUDA base image is optimized for x86_64
 
-## Building on Apple Silicon (M1/M2/M3)
+### Building on Apple Silicon (M1/M2/M3)
 
 If you're on an Apple Silicon Mac, you **must** specify the platform:
 
@@ -206,50 +265,16 @@ df -h
 docker system prune -a
 ```
 
-## GitHub Actions (Automated Builds)
+## GitHub Actions (Already Configured!)
 
-To avoid manual building, set up GitHub Actions to build automatically on release.
+✅ **The workflow is already set up** at `.github/workflows/docker-build.yml`
 
-Create `.github/workflows/docker-build.yml`:
+No need to create anything - just:
+1. Enable workflow permissions (see top of this document)
+2. Create a release or push to main
+3. GitHub automatically builds and pushes
 
-```yaml
-name: Build and Push Docker Image
-
-on:
-  release:
-    types: [published]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ghcr.io/r0mainbatlle/holo1.5-endpoint:latest
-            ghcr.io/r0mainbatlle/holo1.5-endpoint:${{ github.ref_name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-```
-
-This will automatically build and push whenever you create a GitHub release.
+See the "Recommended: Use GitHub Actions" section at the top for full details.
 
 ## Summary
 
