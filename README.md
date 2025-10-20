@@ -1,6 +1,6 @@
 # Holo1.5-7B FastAPI Service (OpenAI Compatible)
 
-[![RunPod](https://img.shields.io/badge/RunPod-Available-7C3AED?style=for-the-badge&logo=runpod)](https://runpod.io)
+[![Runpod](https://api.runpod.io/badge/R0mainBatlle/holo1.5-endpoint)](https://console.runpod.io/hub/R0mainBatlle/holo1.5-endpoint)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://hub.docker.com)
 [![OpenAI Compatible](https://img.shields.io/badge/OpenAI-Compatible-412991?style=for-the-badge&logo=openai)](https://platform.openai.com/docs/api-reference)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green?style=for-the-badge)](LICENSE)
