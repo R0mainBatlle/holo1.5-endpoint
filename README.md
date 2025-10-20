@@ -83,9 +83,26 @@ holo-fastapi-service/
 ## Quick Start
 
 ### Build Notes
-⚠️ **First build takes 5-10 minutes** to download the ~14GB model, but subsequent container starts are instant.
+⚠️ **First build takes 10-15 minutes** to download the ~14GB model, but subsequent container starts are instant.
 
-### Option 1: Docker Compose (GPU - Recommended)
+⚠️ **Apple Silicon Users (M1/M2/M3):** You must build for AMD64 platform. See [BUILD.md](BUILD.md) for detailed instructions.
+
+**Quick build command for Apple Silicon:**
+```bash
+docker buildx build --platform linux/amd64 -t ghcr.io/r0mainbatlle/holo1.5-endpoint:latest .
+```
+
+### Option 1: Using Pre-built Image (Fastest)
+
+```bash
+# Pull from GitHub Container Registry
+docker pull ghcr.io/r0mainbatlle/holo1.5-endpoint:latest
+
+# Run the container
+docker run --gpus all -p 8000:8000 ghcr.io/r0mainbatlle/holo1.5-endpoint:latest
+```
+
+### Option 2: Docker Compose (GPU - Recommended)
 
 ```bash
 # Build the image (downloads model during build)
@@ -95,17 +112,29 @@ docker-compose build
 docker-compose up
 ```
 
-### Option 2: Docker (GPU)
+### Option 3: Docker Build (x86_64 Linux)
 
 ```bash
-# Build the image (downloads model during build - takes 5-10 min)
+# Build the image (downloads model during build - takes 10-15 min)
 docker build -t holo-api .
 
 # Run the container (starts in seconds)
 docker run --gpus all -p 8000:8000 holo-api
 ```
 
-### Option 3: Docker (CPU only)
+### Option 4: Docker Build (Apple Silicon)
+
+```bash
+# Build for AMD64 platform (required for GPU deployment)
+docker buildx build --platform linux/amd64 -t holo-api --load .
+
+# Run with emulation (slow, for testing only)
+docker run --platform linux/amd64 -p 8000:8000 holo-api
+```
+
+**Note:** For production deployment, push to a registry and run on x86_64 hardware.
+
+### Option 5: Docker (CPU only)
 
 ```bash
 # Build the CPU image
@@ -115,7 +144,7 @@ docker build -f Dockerfile.cpu -t holo-api-cpu .
 docker run -p 8000:8000 holo-api-cpu
 ```
 
-### Option 4: Local Development
+### Option 6: Local Development
 
 ```bash
 # Create virtual environment

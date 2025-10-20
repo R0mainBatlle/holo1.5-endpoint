@@ -1,5 +1,5 @@
 # Use NVIDIA CUDA base image for GPU support
-# If you don't have GPU, you can use: FROM python:3.11-slim
+# Note: Use --platform=linux/amd64 when building on Apple Silicon
 FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
 # Set environment variables
@@ -9,12 +9,16 @@ ENV PYTHONUNBUFFERED=1 \
     TRANSFORMERS_CACHE=/app/model_cache \
     HF_HOME=/app/model_cache
 
-# Install Python and system dependencies
-RUN apt-get update && apt-get install -y \
+# Fix potential GPG issues and install Python and system dependencies
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get update --allow-insecure-repositories || apt-get update && \
+    apt-get install -y --no-install-recommends \
     python3.11 \
     python3-pip \
     git \
     curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
