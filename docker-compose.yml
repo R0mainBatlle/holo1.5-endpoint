@@ -8,15 +8,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Model cache directory - persists model between restarts
-      - TRANSFORMERS_CACHE=/app/cache
-      - HF_HOME=/app/cache
+      # Model is baked into the image at /app/model_cache
+      # These environment variables are set in the Dockerfile
+      # - TRANSFORMERS_CACHE=/app/model_cache
+      # - HF_HOME=/app/model_cache
+
       # Optional: Add Hugging Face token for gated models
       # - HF_TOKEN=${HF_TOKEN}
-    volumes:
-      # Named volume for model cache persistence
-      # Model downloads once (~14GB) and persists across container restarts
-      - model-cache:/app/cache
+    # NOTE: No volumes needed! Model is included in the image.
+    # Image size is ~16-18GB but startup is instant.
     deploy:
       resources:
         reservations:
@@ -30,10 +30,4 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 120s
-
-volumes:
-  # Persistent volume for model cache
-  # To reset: docker-compose down -v (removes volume)
-  # To inspect: docker volume inspect holo-fastapi-service_model-cache
-  model-cache:
+      start_period: 60s  # Reduced since model loads instantly

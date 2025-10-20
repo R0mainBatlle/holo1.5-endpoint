@@ -1,6 +1,6 @@
 # Holo1.5-7B FastAPI Service (OpenAI Compatible)
 
-A dockerized FastAPI service providing an **OpenAI-compatible API** for the Holo1.5-7B Vision Language Model. Takes images (via URL or base64) and text as input, returns model predictions in OpenAI format.
+A dockerized FastAPI service providing an **OpenAI-compatible API** for the Holo1.5-7B Vision Language Model. The model is **baked into the Docker image** for instant startup with no downloads required.
 
 ## Model Information
 
@@ -14,12 +14,33 @@ Model page: [Hcompany/Holo1.5-7B](https://huggingface.co/Hcompany/Holo1.5-7B)
 
 ## Key Features
 
+- **Model Baked Into Image** - No runtime downloads, instant startup
 - **OpenAI-Compatible API** - Works with OpenAI SDKs and tools
 - **Image URLs** - Fetch images directly from URLs
 - **Base64 Images** - Support for embedded images
 - **Standard Format** - Compatible with LangChain, OpenAI SDK, etc.
 - **Docker Ready** - Easy deployment with GPU or CPU
-- **RunPod Compatible** - Optimized for RunPod deployment
+- **RunPod Compatible** - No network volumes needed
+
+## Architecture
+
+**Build Time:**
+- Model (~14GB) is downloaded during Docker build
+- Added to image layers
+- Only happens once when building the image
+
+**Runtime:**
+- Container starts instantly with model already loaded
+- No volume mounts or downloads needed
+- Predictable, fast startup every time
+
+**Trade-offs:**
+- ✅ Instant container startup (~30-60 seconds for model loading)
+- ✅ No runtime dependencies or volume management
+- ✅ Perfect for RunPod and serverless deployments
+- ⚠️ Larger image size (~16-18GB vs ~2GB)
+- ⚠️ Longer build time (5-10 minutes)
+- ⚠️ Must rebuild image to update model
 
 ## Project Structure
 
@@ -27,9 +48,10 @@ Model page: [Hcompany/Holo1.5-7B](https://huggingface.co/Hcompany/Holo1.5-7B)
 holo-fastapi-service/
 ├── app/
 │   └── main.py              # FastAPI application
-├── Dockerfile               # GPU-enabled Dockerfile
-├── Dockerfile.cpu           # CPU-only Dockerfile
+├── Dockerfile               # GPU-enabled Dockerfile (model baked in)
+├── Dockerfile.cpu           # CPU-only Dockerfile (model baked in)
 ├── docker-compose.yml       # Docker Compose configuration
+├── download_model.py        # Script to download model during build
 ├── requirements.txt         # Python dependencies
 ├── test_api.py              # Test script
 └── README.md               # This file
@@ -40,6 +62,7 @@ holo-fastapi-service/
 ### Hardware Requirements
 - **GPU Version**: NVIDIA GPU with at least 16GB VRAM (recommended)
 - **CPU Version**: Works but significantly slower (~10x)
+- **Disk Space**: ~20GB for Docker image
 
 ### Software Requirements
 - Docker
@@ -48,19 +71,26 @@ holo-fastapi-service/
 
 ## Quick Start
 
+### Build Notes
+⚠️ **First build takes 5-10 minutes** to download the ~14GB model, but subsequent container starts are instant.
+
 ### Option 1: Docker Compose (GPU - Recommended)
 
 ```bash
-docker-compose up --build
+# Build the image (downloads model during build)
+docker-compose build
+
+# Run the container (starts instantly)
+docker-compose up
 ```
 
 ### Option 2: Docker (GPU)
 
 ```bash
-# Build the image
+# Build the image (downloads model during build - takes 5-10 min)
 docker build -t holo-api .
 
-# Run the container
+# Run the container (starts in seconds)
 docker run --gpus all -p 8000:8000 holo-api
 ```
 
@@ -84,7 +114,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the application
+# Run the application (model downloads on first run)
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -301,78 +331,57 @@ Main prediction endpoint (OpenAI compatible)
 
 ## RunPod Deployment
 
-RunPod uses ephemeral storage for containers, so you need to use **Network Volumes** to persist the model cache between pod restarts.
+With the model baked into the image, RunPod deployment is **extremely simple** - no network volumes needed!
 
-### Setup Network Volume
+### Quick Deploy
 
-1. **Create a Network Volume in RunPod**
-   - Go to RunPod dashboard → Storage → Network Volumes
-   - Create a new volume (recommended: 50GB+ to store model)
-   - Note the volume name
+1. **Build and push your image** (or use GitHub Actions):
+```bash
+# Build
+docker build -t your-registry/holo-api:latest .
 
-2. **Deploy with Network Volume**
-
-When deploying your pod:
-
-```yaml
-# In RunPod template/deployment settings:
-
-# Container Image
-ghcr.io/your-username/holo-api:latest
-
-# Volume Mount
-Container Path: /workspace/cache
-Volume: your-network-volume-name
-
-# Environment Variables
-TRANSFORMERS_CACHE=/workspace/cache
+# Push to registry
+docker push your-registry/holo-api:latest
 ```
 
-3. **Docker Command for RunPod**
+2. **Deploy on RunPod**:
+```yaml
+# Container Image
+your-registry/holo-api:latest
+
+# Container Ports
+8000
+
+# Environment Variables (optional)
+# HF_TOKEN=your_token_here
+
+# GPU Configuration
+GPU: A40 (or any GPU with 16GB+ VRAM)
+```
+
+3. **That's it!** Container starts in 30-60 seconds with model ready.
+
+### RunPod Docker Command
 
 ```bash
-docker run --gpus all \
+docker run --runtime nvidia --gpus all \
   -p 8000:8000 \
-  -v /runpod-volume:/workspace/cache \
-  -e TRANSFORMERS_CACHE=/workspace/cache \
-  holo-api
+  --ipc=host \
+  your-registry/holo-api:latest
 ```
 
-### Model Caching Behavior on RunPod
+### Benefits for RunPod
 
-| Scenario | Model Download | Startup Time | Cost |
-|----------|---------------|--------------|------|
-| **With Network Volume** | First run only (~5-10 min) | <2 min subsequent | Volume storage fee |
-| **Without Network Volume** | Every pod start (~5-10 min) | Always slow | No extra storage |
+| Aspect | With Baked Model | With Network Volume |
+|--------|-----------------|---------------------|
+| **Startup Time** | 30-60 seconds | 30-60 seconds after first download |
+| **First Start** | Same as every start | 5-10 min download |
+| **Complexity** | Simple - just run | Need volume setup |
+| **Cost** | Image storage only | Image + volume storage |
+| **Reliability** | Always works | Depends on volume mount |
+| **Portability** | Perfect | Volume tied to datacenter |
 
-**Recommendation**: Use Network Volumes for production. The storage cost (~$0.10/GB/month) is minimal compared to re-downloading 14GB on every pod restart.
-
-### RunPod Example docker-compose Override
-
-```yaml
-# docker-compose.runpod.yml
-version: '3.8'
-
-services:
-  holo-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - TRANSFORMERS_CACHE=/workspace/cache
-      - HF_HOME=/workspace/cache
-    volumes:
-      - /runpod-volume:/workspace/cache  # RunPod network volume
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-```
+**Recommendation**: For RunPod, the baked-in model approach is simpler and more reliable.
 
 ## What Image Input to Provide
 
@@ -428,11 +437,10 @@ The Holo1.5-7B model is optimized for **UI/interface screenshots**:
 ### Environment Variables
 
 ```bash
-# Cache directory for model files (important for RunPod)
-TRANSFORMERS_CACHE=/workspace/cache
-HF_HOME=/workspace/cache
+# Model cache is baked into image at /app/model_cache
+# These are set in the Dockerfile and normally don't need changing
 
-# Hugging Face token (if needed for gated models)
+# Optional: Hugging Face token (if needed for gated models)
 HF_TOKEN=your_token_here
 ```
 
@@ -443,53 +451,89 @@ Edit `app/main.py` to adjust:
 - `torch_dtype`: Precision (bfloat16 for GPU, float32 for CPU)
 - `temperature`: Not currently used but accepted in API
 
+## Build Customization
+
+### To rebuild with updated model:
+
+```bash
+# Force rebuild (ignores cache)
+docker build --no-cache -t holo-api .
+
+# Or clear specific layer
+docker build --pull -t holo-api .
+```
+
+### To skip model download during build (for testing):
+
+Comment out the download step in `Dockerfile`:
+```dockerfile
+# RUN python3 download_model.py
+```
+
 ## Troubleshooting
 
 ### Out of Memory (GPU)
 - Reduce `max_tokens` in requests
-- Use smaller batch sizes
-- Enable model quantization
 - Use GPU with more VRAM (24GB+ recommended)
+- Model requires ~16GB VRAM during inference
 
 ### Slow Performance (CPU)
 - **Strongly recommend GPU** for production
 - Reduce image resolution before sending
-- Consider using model quantization
 - Expected ~10x slower than GPU
 
-### Model Download Issues
-- Ensure stable internet connection
-- First run downloads ~14GB
-- Check disk space (need ~20GB free)
-- On RunPod: Ensure network volume is mounted correctly
+### Build Fails During Model Download
+- Check internet connection
+- Ensure sufficient disk space (~20GB)
+- Try increasing Docker memory limit
+- Check Docker Hub rate limits
 
-### RunPod Specific Issues
+### Container Starts But Model Not Found
+- Ensure build completed successfully
+- Check build logs for download errors
+- Verify `TRANSFORMERS_CACHE=/app/model_cache` is set
 
-**Model re-downloads every time:**
-- Check that network volume is properly mounted
-- Verify `TRANSFORMERS_CACHE` environment variable is set
-- Ensure volume has sufficient space (50GB+)
-
-**Connection timeouts:**
-- Increase client timeout (first request takes 1-2 minutes for model loading)
-- Check RunPod pod logs for errors
+### Large Image Size
+- This is expected (~16-18GB)
+- Required to include the 14GB model
+- Use registry with sufficient storage
+- Consider using Docker layer caching
 
 ## Performance Notes
 
-- **First request**: Slow due to model loading (~1-2 minutes)
-- **Subsequent requests**: Fast (~1-5 seconds depending on image size)
+- **Container startup**: 30-60 seconds (model loading to GPU)
+- **First request**: 1-5 seconds
+- **Subsequent requests**: 1-5 seconds per request
 - **GPU vs CPU**: GPU is ~10x faster
-- **Model size**: ~14GB download on first run
+- **Image size**: ~16-18GB (includes 14GB model)
+- **Build time**: 5-10 minutes (one-time per build)
 - **VRAM usage**: ~16GB during inference
 
-## Model Cache Location Priority
+## Comparison: Baked-in vs Runtime Download
 
-The service checks for cache in this order:
-1. `TRANSFORMERS_CACHE` environment variable
-2. `HF_HOME` environment variable
-3. Default: `~/.cache/huggingface/`
+| Aspect | Baked Into Image (This Repo) | Runtime Download |
+|--------|------------------------------|------------------|
+| **Container Startup** | 30-60 sec | 30-60 sec (after download) |
+| **First Start** | Same every time | 5-10 min download |
+| **Image Size** | ~16-18GB | ~2GB |
+| **Build Time** | 5-10 min | 1-2 min |
+| **Volumes Needed** | None | Yes (for persistence) |
+| **Network Required** | Only during build | Every first start |
+| **RunPod Setup** | Simple | Need network volumes |
+| **Best For** | Production, RunPod | Development |
 
-For RunPod, always set `TRANSFORMERS_CACHE=/workspace/cache`
+## Model Cache Location
+
+The model is baked into the image at:
+```
+/app/model_cache/
+```
+
+Environment variables set in Dockerfile:
+```bash
+TRANSFORMERS_CACHE=/app/model_cache
+HF_HOME=/app/model_cache
+```
 
 ## License
 
@@ -501,3 +545,20 @@ For issues specific to:
 - **The model**: [Hcompany/Holo1.5-7B](https://huggingface.co/Hcompany/Holo1.5-7B)
 - **This API service**: Create an issue in this repository
 - **OpenAI API format**: [OpenAI API Documentation](https://platform.openai.com/docs/api-reference/chat)
+
+## FAQ
+
+**Q: Why is the image so large?**
+A: The model is ~14GB, so the total image is ~16-18GB. This is the trade-off for instant startup.
+
+**Q: Can I use network volumes instead?**
+A: Yes, but it's not necessary with this setup. The model is already in the image.
+
+**Q: Do I need to rebuild to update the model?**
+A: Yes. When a new version is released, rebuild the image with `docker build --no-cache`.
+
+**Q: Will this work on RunPod serverless?**
+A: Yes! Perfect for serverless since there's no initialization delay.
+
+**Q: How do I reduce image size?**
+A: You can use model quantization or switch to runtime download approach, but you'll lose the instant startup benefit.
