@@ -1,0 +1,109 @@
+{
+  "tests": [
+    {
+      "name": "health_check",
+      "description": "Check if the service is healthy and model is loaded",
+      "request": {
+        "method": "GET",
+        "path": "/health",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "expected": {
+        "status_code": 200,
+        "body_contains": [
+          "healthy",
+          "model_loaded"
+        ]
+      },
+      "timeout": 10
+    },
+    {
+      "name": "root_endpoint",
+      "description": "Check root endpoint returns status",
+      "request": {
+        "method": "GET",
+        "path": "/",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "expected": {
+        "status_code": 200,
+        "body_contains": [
+          "running",
+          "Holo"
+        ]
+      },
+      "timeout": 5
+    },
+    {
+      "name": "list_models",
+      "description": "Test the /v1/models endpoint",
+      "request": {
+        "method": "GET",
+        "path": "/v1/models",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "expected": {
+        "status_code": 200,
+        "body_contains": [
+          "Hcompany/Holo1.5-7B"
+        ]
+      },
+      "timeout": 5
+    },
+    {
+      "name": "chat_completions_with_image_url",
+      "description": "Test chat completions endpoint with an image URL",
+      "request": {
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "Hcompany/Holo1.5-7B",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "What do you see in this image?"
+                },
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"
+                  }
+                }
+              ]
+            }
+          ],
+          "max_tokens": 100
+        }
+      },
+      "expected": {
+        "status_code": 200,
+        "body_contains": [
+          "choices",
+          "message",
+          "content"
+        ]
+      },
+      "timeout": 30
+    }
+  ],
+  "startup_timeout": 120,
+  "healthcheck_interval": 30,
+  "notes": [
+    "Model is baked into the image, so startup should be fast (~30-60 seconds)",
+    "First inference request may take 5-10 seconds as the model loads to GPU",
+    "Subsequent requests should be 1-5 seconds",
+    "Tests use public image URLs to avoid base64 payload size"
+  ]
+}

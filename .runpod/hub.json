@@ -1,0 +1,73 @@
+{
+  "name": "Holo1.5-7B VLM API",
+  "description": "OpenAI-compatible API for Holo1.5-7B Vision Language Model. Specialized for UI/interface screenshot analysis, element localization, and screen content understanding. Model baked into image for instant startup.",
+  "category": "AI/ML",
+  "version": "1.0.0",
+  "image": "ghcr.io/r0mainbatlle/holo1.5-endpoint:latest",
+  "readme": "README.md",
+  "env": [
+    {
+      "name": "PORT",
+      "description": "Port for the API server",
+      "default": "8000",
+      "required": false
+    },
+    {
+      "name": "HF_TOKEN",
+      "description": "Hugging Face token for accessing gated models (optional)",
+      "required": false
+    },
+    {
+      "name": "MAX_TOKENS",
+      "description": "Maximum tokens for model generation",
+      "default": "512",
+      "required": false
+    }
+  ],
+  "ports": [
+    {
+      "port": 8000,
+      "protocol": "http",
+      "description": "FastAPI HTTP endpoint"
+    }
+  ],
+  "gpu": {
+    "required": true,
+    "minimum_vram_gb": 16,
+    "recommended_vram_gb": 24,
+    "recommended_gpu": "A40"
+  },
+  "resources": {
+    "cpu": 4,
+    "memory_gb": 32,
+    "disk_gb": 20
+  },
+  "endpoints": {
+    "health": {
+      "path": "/health",
+      "method": "GET",
+      "description": "Health check endpoint"
+    },
+    "chat_completions": {
+      "path": "/v1/chat/completions",
+      "method": "POST",
+      "description": "OpenAI-compatible chat completions endpoint"
+    },
+    "models": {
+      "path": "/v1/models",
+      "method": "GET",
+      "description": "List available models"
+    }
+  },
+  "tags": [
+    "vision-language-model",
+    "vlm",
+    "ui-analysis",
+    "screen-understanding",
+    "openai-compatible",
+    "holo",
+    "qwen"
+  ],
+  "license": "Apache-2.0",
+  "documentation": "https://github.com/R0mainBatlle/holo1.5-endpoint"
+}

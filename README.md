@@ -1,5 +1,10 @@
 # Holo1.5-7B FastAPI Service (OpenAI Compatible)
 
+[![RunPod](https://img.shields.io/badge/RunPod-Available-7C3AED?style=for-the-badge&logo=runpod)](https://runpod.io)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://hub.docker.com)
+[![OpenAI Compatible](https://img.shields.io/badge/OpenAI-Compatible-412991?style=for-the-badge&logo=openai)](https://platform.openai.com/docs/api-reference)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green?style=for-the-badge)](LICENSE)
+
 A dockerized FastAPI service providing an **OpenAI-compatible API** for the Holo1.5-7B Vision Language Model. The model is **baked into the Docker image** for instant startup with no downloads required.
 
 ## Model Information
@@ -16,11 +21,12 @@ Model page: [Hcompany/Holo1.5-7B](https://huggingface.co/Hcompany/Holo1.5-7B)
 
 - **Model Baked Into Image** - No runtime downloads, instant startup
 - **OpenAI-Compatible API** - Works with OpenAI SDKs and tools
+- **RunPod Serverless Ready** - Configured for RunPod Hub with automated tests
 - **Image URLs** - Fetch images directly from URLs
 - **Base64 Images** - Support for embedded images
 - **Standard Format** - Compatible with LangChain, OpenAI SDK, etc.
 - **Docker Ready** - Easy deployment with GPU or CPU
-- **RunPod Compatible** - No network volumes needed
+- **No Volume Management** - Everything included in the image
 
 ## Architecture
 
@@ -46,15 +52,20 @@ Model page: [Hcompany/Holo1.5-7B](https://huggingface.co/Hcompany/Holo1.5-7B)
 
 ```
 holo-fastapi-service/
+├── .runpod/
+│   ├── hub.json             # RunPod Hub configuration
+│   └── tests.json           # RunPod automated tests
 ├── app/
 │   └── main.py              # FastAPI application
 ├── Dockerfile               # GPU-enabled Dockerfile (model baked in)
 ├── Dockerfile.cpu           # CPU-only Dockerfile (model baked in)
 ├── docker-compose.yml       # Docker Compose configuration
 ├── download_model.py        # Script to download model during build
+├── handler.py               # RunPod serverless handler
+├── start_runpod.sh          # RunPod startup script
 ├── requirements.txt         # Python dependencies
 ├── test_api.py              # Test script
-└── README.md               # This file
+└── README.md                # This file
 ```
 
 ## Requirements
@@ -382,6 +393,122 @@ docker run --runtime nvidia --gpus all \
 | **Portability** | Perfect | Volume tied to datacenter |
 
 **Recommendation**: For RunPod, the baked-in model approach is simpler and more reliable.
+
+### RunPod Serverless
+
+This repository is configured for **RunPod Serverless** deployment with automatic testing and validation.
+
+#### Files for RunPod Serverless
+
+```
+.runpod/
+├── hub.json     # RunPod Hub configuration
+└── tests.json   # Automated tests for validation
+
+handler.py       # RunPod serverless handler
+start_runpod.sh  # Startup script for serverless
+```
+
+#### Handler Usage
+
+The RunPod serverless handler accepts two input formats:
+
+**1. Simple Format:**
+```json
+{
+  "input": {
+    "image_url": "https://example.com/screenshot.png",
+    "text": "Where is the login button?",
+    "max_tokens": 512
+  }
+}
+```
+
+**2. OpenAI Format:**
+```json
+{
+  "input": {
+    "model": "Hcompany/Holo1.5-7B",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "text", "text": "Describe this UI"},
+          {"type": "image_url", "image_url": {"url": "https://example.com/image.jpg"}}
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Response Format:**
+```json
+{
+  "status": "success",
+  "output": {
+    "id": "chatcmpl-abc123",
+    "object": "chat.completion",
+    "choices": [
+      {
+        "message": {
+          "role": "assistant",
+          "content": "The model's response..."
+        }
+      }
+    ]
+  }
+}
+```
+
+#### Deploying to RunPod Hub
+
+1. **Push to GitHub**:
+```bash
+git add .
+git commit -m "Add RunPod serverless support"
+git push origin main
+```
+
+2. **Create a Release**:
+```bash
+# Create and push a tag
+git tag -a v1.0.0 -m "Release v1.0.0 - RunPod Serverless"
+git push origin v1.0.0
+```
+
+Or via GitHub UI:
+- Go to your repository → Releases → Create new release
+- Choose a tag (e.g., `v1.0.0`)
+- Add release notes
+- Publish release
+
+3. **Submit to RunPod Hub**:
+- Your repository will be automatically discovered by RunPod Hub
+- The `.runpod/hub.json` and `.runpod/tests.json` files configure everything
+- Tests will run automatically to validate the deployment
+
+4. **Access on RunPod**:
+- Once approved, your endpoint will be available on RunPod Hub
+- Users can deploy with one click
+- Automatic scaling and billing
+
+#### Testing Handler Locally
+
+```bash
+# Start the FastAPI server
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+
+# Test the handler
+python handler.py
+```
+
+#### Environment Variables for Serverless
+
+```bash
+API_BASE_URL=http://localhost:8000  # Usually localhost in serverless
+HF_TOKEN=your_token_here            # Optional, for gated models
+```
 
 ## What Image Input to Provide
 
